@@ -19,6 +19,10 @@ impl From<Coin> for Token {
 }
 
 impl Token {
+    pub fn new(info: TokenInfo, amount: Uint128) -> Self {
+        Self { info, amount }
+    }
+
     pub fn send(&self, target: &Addr) -> StdResult<CosmosMsg> {
         self.info.send(target, self.amount)
     }
@@ -40,6 +44,20 @@ impl Token {
     pub fn from_key(key: TokenKey, amount: Uint128) -> Self {
         Self {
             info: TokenInfo::from_key(key),
+            amount,
+        }
+    }
+
+    pub fn native(denom: impl Into<String>, amount: Uint128) -> Self {
+        Self {
+            info: TokenInfo::native(denom),
+            amount,
+        }
+    }
+
+    pub fn cw20(address: Addr, amount: Uint128) -> Self {
+        Self {
+            info: TokenInfo::cw20(address),
             amount,
         }
     }

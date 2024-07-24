@@ -10,8 +10,10 @@ pub struct NativeToken {
 }
 
 impl NativeToken {
-    pub fn new(denom: String) -> Self {
-        Self { denom }
+    pub fn new(denom: impl Into<String>) -> Self {
+        Self {
+            denom: denom.into(),
+        }
     }
 }
 

@@ -17,7 +17,7 @@ impl TokenInfo {
         Self::Cw20(Cw20Token::new(address))
     }
 
-    pub fn native(denom: String) -> Self {
+    pub fn native(denom: impl Into<String>) -> Self {
         Self::Native(NativeToken::new(denom))
     }
 
