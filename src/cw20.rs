@@ -4,6 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub struct Cw20Token {
     pub address: Addr,
 }
@@ -35,12 +36,14 @@ impl GenericToken for Cw20Token {
     }
 
     fn balance(&self, address: &Addr, deps: Deps) -> StdResult<Uint128> {
-        deps.querier.query_wasm_smart::<BalanceResponse>(
-            &self.address,
-            &cw20_base::msg::QueryMsg::Balance {
-                address: address.to_string(),
-            },
-        ).map(|res| res.balance)
+        deps.querier
+            .query_wasm_smart::<BalanceResponse>(
+                &self.address,
+                &cw20_base::msg::QueryMsg::Balance {
+                    address: address.to_string(),
+                },
+            )
+            .map(|res| res.balance)
     }
 
     fn attributes(&self) -> Vec<Attribute> {

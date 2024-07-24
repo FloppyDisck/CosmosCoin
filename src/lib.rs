@@ -15,5 +15,4 @@ pub trait GenericToken {
     fn balance(&self, address: &Addr, deps: Deps) -> StdResult<Uint128>;
     fn attributes(&self) -> Vec<Attribute>;
     // TODO: add grant function and disclaimer that CW20 granting is the one that works on smart contracts
-    // TODO:
 }

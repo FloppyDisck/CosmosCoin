@@ -4,6 +4,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum TokenInfo {
     Cw20(Cw20Token),
     Native(NativeToken),
@@ -22,7 +23,7 @@ impl TokenInfo {
 
     pub fn key(&self) -> TokenKey {
         match &self {
-            TokenInfo::Cw20(info) => (0, info.address.as_ref().into_string()),
+            TokenInfo::Cw20(info) => (0, info.address.as_ref().to_string()),
             TokenInfo::Native(info) => (1, info.denom.clone()),
         }
     }
