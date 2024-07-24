@@ -13,7 +13,7 @@ impl From<Coin> for Token {
     fn from(value: Coin) -> Self {
         Self {
             info: TokenInfo::native(value.denom),
-            amount: value.amount
+            amount: value.amount,
         }
     }
 }
