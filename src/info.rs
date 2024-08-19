@@ -21,6 +21,20 @@ impl TokenInfo {
         Self::Native(NativeToken::new(denom))
     }
 
+    pub fn is_native(&self) -> bool {
+        match self {
+            TokenInfo::Cw20(_) => false,
+            TokenInfo::Native(_) => true
+        }
+    }
+
+    pub fn is_cw20(&self) -> bool {
+        match self {
+            TokenInfo::Cw20(_) => true,
+            TokenInfo::Native(_) => false
+        }
+    }
+
     pub fn key(&self) -> TokenKey {
         match &self {
             TokenInfo::Cw20(info) => (0, info.address.as_ref().to_string()),
