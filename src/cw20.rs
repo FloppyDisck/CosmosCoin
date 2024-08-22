@@ -13,6 +13,18 @@ impl Cw20Token {
     pub fn new(address: Addr) -> Self {
         Self { address }
     }
+
+    pub fn transfer_from(&self, owner: &Addr, recipient: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
+        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+            contract_addr: self.address.to_string(),
+            msg: to_json_binary(&cw20_base::msg::ExecuteMsg::TransferFrom {
+                owner: owner.to_string(),
+                recipient: recipient.to_string(),
+                amount,
+            })?,
+            funds: vec![],
+        }))
+    }
 }
 
 impl GenericToken for Cw20Token {
