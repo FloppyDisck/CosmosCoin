@@ -62,3 +62,29 @@ impl Token {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use cosmwasm_std::Addr;
+    use crate::TokenInfo;
+
+    #[test]
+    fn serde_cw20() {
+        let cw20 = TokenInfo::cw20(Addr::unchecked("some_token"));
+        let got_serialized = serde_json::to_string(&cw20).unwrap();
+        let expected_serialized = "{\"cw20\":\"some_token\"}".to_string();
+
+        assert_eq!(got_serialized, expected_serialized);
+        assert_eq!(serde_json::from_str::<TokenInfo>(&expected_serialized).unwrap(), cw20);
+    }
+
+    #[test]
+    fn serde_native() {
+        let native = TokenInfo::native("some_token");
+        let got_serialized = serde_json::to_string(&native).unwrap();
+        let expected_serialized = "{\"native\":\"some_token\"}".to_string();
+
+        assert_eq!(got_serialized, expected_serialized);
+        assert_eq!(serde_json::from_str::<TokenInfo>(&expected_serialized).unwrap(), native);
+    }
+}

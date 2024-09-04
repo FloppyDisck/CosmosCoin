@@ -1,12 +1,30 @@
 use crate::GenericToken;
 use cosmwasm_std::{to_json_binary, Addr, Attribute, CosmosMsg, Deps, StdResult, Uint128, WasmMsg};
 use schemars::JsonSchema;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub struct Cw20Token {
     pub address: Addr,
+}
+
+impl Serialize for Cw20Token {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+    {
+        serializer.serialize_str(&self.address.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for Cw20Token {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>
+    {
+        String::deserialize(deserializer).map(|addr| Self::new(Addr::unchecked(addr)))
+    }
 }
 
 impl Cw20Token {
@@ -70,4 +88,20 @@ impl GenericToken for Cw20Token {
 #[derive(Deserialize)]
 struct BalanceResponse {
     pub balance: Uint128,
+}
+
+#[cfg(test)]
+mod test {
+    use cosmwasm_std::Addr;
+    use crate::Cw20Token;
+
+    #[test]
+    fn serde() {
+        let cw20 = Cw20Token::new(Addr::unchecked("some_token"));
+        let got_serialized = serde_json::to_string(&cw20).unwrap();
+        let expected_serialized = "\"some_token\"".to_string();
+
+        assert_eq!(got_serialized, expected_serialized);
+        assert_eq!(serde_json::from_str::<Cw20Token>(&expected_serialized).unwrap(), cw20);
+    }
 }
