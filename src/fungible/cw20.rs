@@ -1,4 +1,4 @@
-use crate::GenericToken;
+use crate::{AttributeBuilder, Fungible};
 use cosmwasm_std::{to_json_binary, Addr, Attribute, CosmosMsg, Deps, StdResult, Uint128, WasmMsg};
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -12,7 +12,7 @@ pub struct Cw20Token {
 impl Serialize for Cw20Token {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer
+        S: Serializer,
     {
         serializer.serialize_str(&self.address.as_str())
     }
@@ -21,7 +21,7 @@ impl Serialize for Cw20Token {
 impl<'de> Deserialize<'de> for Cw20Token {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>
+        D: Deserializer<'de>,
     {
         String::deserialize(deserializer).map(|addr| Self::new(Addr::unchecked(addr)))
     }
@@ -32,7 +32,12 @@ impl Cw20Token {
         Self { address }
     }
 
-    pub fn transfer_from(&self, owner: &Addr, recipient: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
+    pub fn transfer_from(
+        &self,
+        owner: &Addr,
+        recipient: &Addr,
+        amount: Uint128,
+    ) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.address.to_string(),
             msg: to_json_binary(&cw20_base::msg::ExecuteMsg::TransferFrom {
@@ -45,42 +50,46 @@ impl Cw20Token {
     }
 }
 
-impl GenericToken for Cw20Token {
-    fn send(&self, target: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
+impl Fungible for Cw20Token {
+    fn send(&self, target: impl Into<String>, amount: impl Into<Uint128>) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.address.to_string(),
             msg: to_json_binary(&cw20_base::msg::ExecuteMsg::Transfer {
-                recipient: target.to_string(),
-                amount,
+                recipient: target.into(),
+                amount: amount.into(),
             })?,
             funds: vec![],
         }))
     }
 
-    fn burn(&self, amount: Uint128) -> StdResult<CosmosMsg> {
+    fn burn(&self, amount: impl Into<Uint128>) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Wasm(WasmMsg::Execute {
             contract_addr: self.address.to_string(),
-            msg: to_json_binary(&cw20_base::msg::ExecuteMsg::Burn { amount })?,
+            msg: to_json_binary(&cw20_base::msg::ExecuteMsg::Burn {
+                amount: amount.into(),
+            })?,
             funds: vec![],
         }))
     }
 
-    fn balance(&self, address: &Addr, deps: Deps) -> StdResult<Uint128> {
+    fn balance(&self, address: impl Into<String>, deps: Deps) -> StdResult<Uint128> {
         deps.querier
             .query_wasm_smart::<BalanceResponse>(
                 &self.address,
                 &cw20_base::msg::QueryMsg::Balance {
-                    address: address.to_string(),
+                    address: address.into(),
                 },
             )
             .map(|res| res.balance)
     }
+}
 
-    fn attributes(&self) -> Vec<Attribute> {
-        vec![
+impl AttributeBuilder for Cw20Token {
+    fn attributes(&self) -> StdResult<Vec<Attribute>> {
+        Ok(vec![
             Attribute::new("type", "cw20"),
             Attribute::new("address", &self.address),
-        ]
+        ])
     }
 }
 
@@ -92,8 +101,8 @@ struct BalanceResponse {
 
 #[cfg(test)]
 mod test {
+    use crate::fungible::Cw20Token;
     use cosmwasm_std::Addr;
-    use crate::Cw20Token;
 
     #[test]
     fn serde() {
@@ -102,6 +111,9 @@ mod test {
         let expected_serialized = "\"some_token\"".to_string();
 
         assert_eq!(got_serialized, expected_serialized);
-        assert_eq!(serde_json::from_str::<Cw20Token>(&expected_serialized).unwrap(), cw20);
+        assert_eq!(
+            serde_json::from_str::<Cw20Token>(&expected_serialized).unwrap(),
+            cw20
+        );
     }
 }

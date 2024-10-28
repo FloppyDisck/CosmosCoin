@@ -1,5 +1,5 @@
-use crate::GenericToken;
-use cosmwasm_std::{Addr, Attribute, BankMsg, Coin, CosmosMsg, Deps, StdResult, Uint128};
+use crate::{AttributeBuilder, Fungible};
+use cosmwasm_std::{Attribute, BankMsg, Coin, CosmosMsg, Deps, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -11,7 +11,7 @@ pub struct NativeToken {
 impl Serialize for NativeToken {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer
+        S: Serializer,
     {
         serializer.serialize_str(&self.denom)
     }
@@ -20,7 +20,7 @@ impl Serialize for NativeToken {
 impl<'de> Deserialize<'de> for NativeToken {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>
+        D: Deserializer<'de>,
     {
         String::deserialize(deserializer).map(|denom| Self::new(denom))
     }
@@ -34,43 +34,45 @@ impl NativeToken {
     }
 }
 
-impl GenericToken for NativeToken {
-    fn send(&self, target: &Addr, amount: Uint128) -> StdResult<CosmosMsg> {
+impl Fungible for NativeToken {
+    fn send(&self, target: impl Into<String>, amount: impl Into<Uint128>) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Bank(BankMsg::Send {
-            to_address: target.to_string(),
+            to_address: target.into(),
             amount: vec![Coin {
                 denom: self.denom.clone(),
-                amount,
+                amount: amount.into(),
             }],
         }))
     }
 
-    fn burn(&self, amount: Uint128) -> StdResult<CosmosMsg> {
+    fn burn(&self, amount: impl Into<Uint128>) -> StdResult<CosmosMsg> {
         Ok(CosmosMsg::Bank(BankMsg::Burn {
             amount: vec![Coin {
                 denom: self.denom.clone(),
-                amount,
+                amount: amount.into(),
             }],
         }))
     }
 
-    fn balance(&self, address: &Addr, deps: Deps) -> StdResult<Uint128> {
+    fn balance(&self, address: impl Into<String>, deps: Deps) -> StdResult<Uint128> {
         deps.querier
             .query_balance(address, &self.denom)
             .map(|coin| coin.amount)
     }
+}
 
-    fn attributes(&self) -> Vec<Attribute> {
-        vec![
+impl AttributeBuilder for NativeToken {
+    fn attributes(&self) -> StdResult<Vec<Attribute>> {
+        Ok(vec![
             Attribute::new("type", "native"),
             Attribute::new("denom", &self.denom),
-        ]
+        ])
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::NativeToken;
+    use crate::fungible::NativeToken;
 
     #[test]
     fn serde() {
@@ -79,6 +81,9 @@ mod test {
         let expected_serialized = "\"some_token\"".to_string();
 
         assert_eq!(got_serialized, expected_serialized);
-        assert_eq!(serde_json::from_str::<NativeToken>(&expected_serialized).unwrap(), native);
+        assert_eq!(
+            serde_json::from_str::<NativeToken>(&expected_serialized).unwrap(),
+            native
+        );
     }
 }
