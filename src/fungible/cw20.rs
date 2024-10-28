@@ -3,28 +3,9 @@ use cosmwasm_std::{to_json_binary, Addr, Attribute, CosmosMsg, Deps, StdResult, 
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Cw20Token {
     pub address: Addr,
-}
-
-impl Serialize for Cw20Token {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.address.as_str())
-    }
-}
-
-impl<'de> Deserialize<'de> for Cw20Token {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        String::deserialize(deserializer).map(|addr| Self::new(Addr::unchecked(addr)))
-    }
 }
 
 impl Cw20Token {
@@ -90,6 +71,36 @@ impl AttributeBuilder for Cw20Token {
             Attribute::new("type", "cw20"),
             Attribute::new("address", &self.address),
         ])
+    }
+}
+
+impl Serialize for Cw20Token {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.address.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for Cw20Token {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer).map(|addr| Self::new(Addr::unchecked(addr)))
+    }
+}
+
+impl JsonSchema for Cw20Token {
+    fn schema_name() -> String {
+        "Cw20Token".to_owned()
+    }
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed(concat!(module_path!(), "::", "Cw20Token"))
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        gen.subschema_for::<Addr>()
     }
 }
 

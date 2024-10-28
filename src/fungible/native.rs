@@ -1,29 +1,11 @@
 use crate::{AttributeBuilder, Fungible};
-use cosmwasm_std::{Attribute, BankMsg, Coin, CosmosMsg, Deps, StdResult, Uint128};
+use cosmwasm_std::{Addr, Attribute, BankMsg, Coin, CosmosMsg, Deps, StdResult, Uint128};
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Clone, Debug, PartialEq, JsonSchema)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NativeToken {
     pub denom: String,
-}
-
-impl Serialize for NativeToken {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.denom)
-    }
-}
-
-impl<'de> Deserialize<'de> for NativeToken {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        String::deserialize(deserializer).map(|denom| Self::new(denom))
-    }
 }
 
 impl NativeToken {
@@ -67,6 +49,36 @@ impl AttributeBuilder for NativeToken {
             Attribute::new("type", "native"),
             Attribute::new("denom", &self.denom),
         ])
+    }
+}
+
+impl Serialize for NativeToken {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.denom)
+    }
+}
+
+impl<'de> Deserialize<'de> for NativeToken {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer).map(|denom| Self::new(denom))
+    }
+}
+
+impl JsonSchema for NativeToken {
+    fn schema_name() -> String {
+        "NativeToken".to_owned()
+    }
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed(concat!(module_path!(), "::", "NativeToken"))
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        gen.subschema_for::<Addr>()
     }
 }
 

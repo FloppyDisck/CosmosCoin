@@ -1,32 +1,13 @@
 use crate::non_fungible::NonFungible;
 use crate::AttributeBuilder;
-use cosmwasm_std::{to_json_binary, Addr, Attribute, CosmosMsg, Deps, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{to_json_binary, Addr, Attribute, CosmosMsg, Deps, StdResult, WasmMsg};
 use cw721::{NumTokensResponse, OwnerOfResponse, TokensResponse};
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Clone, Debug, PartialEq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Cw721Token {
     pub address: Addr,
-}
-
-impl Serialize for Cw721Token {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.address.as_str())
-    }
-}
-
-impl<'de> Deserialize<'de> for Cw721Token {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        String::deserialize(deserializer).map(|addr| Self::new(Addr::unchecked(addr)))
-    }
 }
 
 impl Cw721Token {
@@ -108,5 +89,54 @@ impl AttributeBuilder for Cw721Token {
             Attribute::new("type", "cw721"),
             Attribute::new("address", &self.address),
         ])
+    }
+}
+
+impl Serialize for Cw721Token {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.address.as_str())
+    }
+}
+
+impl<'de> Deserialize<'de> for Cw721Token {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer).map(|addr| Self::new(Addr::unchecked(addr)))
+    }
+}
+
+impl JsonSchema for Cw721Token {
+    fn schema_name() -> String {
+        "Cw721Token".to_owned()
+    }
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed(concat!(module_path!(), "::", "Cw721Token"))
+    }
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        gen.subschema_for::<Addr>()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::non_fungible::cw721::Cw721Token;
+    use cosmwasm_std::Addr;
+
+    #[test]
+    fn serde() {
+        let cw721 = Cw721Token::new(Addr::unchecked("some_token"));
+        let got_serialized = serde_json::to_string(&cw721).unwrap();
+        let expected_serialized = "\"some_token\"".to_string();
+
+        assert_eq!(got_serialized, expected_serialized);
+        assert_eq!(
+            serde_json::from_str::<Cw721Token>(&expected_serialized).unwrap(),
+            cw721
+        );
     }
 }

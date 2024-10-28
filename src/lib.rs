@@ -3,6 +3,7 @@ pub mod non_fungible;
 
 use cosmwasm_std::{to_json_string, Attribute, Response, StdResult};
 pub use fungible::*;
+pub use non_fungible::*;
 use serde::Serialize;
 
 // TODO: implement custom JsonSchema

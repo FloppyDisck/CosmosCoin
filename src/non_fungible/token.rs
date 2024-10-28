@@ -53,3 +53,22 @@ impl AttributeBuilder for NonFungibleToken {
         Ok(attributes)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::*;
+    use cosmwasm_std::Addr;
+
+    #[test]
+    fn serde_base() {
+        let base = NonFungibleTokenInfo::base(Addr::unchecked("some_token"));
+        let got_serialized = serde_json::to_string(&base).unwrap();
+        let expected_serialized = "{\"base\":\"some_token\"}".to_string();
+
+        assert_eq!(got_serialized, expected_serialized);
+        assert_eq!(
+            serde_json::from_str::<NonFungibleTokenInfo>(&expected_serialized).unwrap(),
+            base
+        );
+    }
+}

@@ -2,6 +2,10 @@ mod cw721;
 mod info;
 mod token;
 
+pub use cw721::*;
+pub use info::*;
+pub use token::*;
+
 use ::cw721::OwnerOfResponse;
 use cosmwasm_std::{CosmosMsg, Deps, StdResult};
 
