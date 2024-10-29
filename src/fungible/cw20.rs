@@ -1,8 +1,6 @@
 use crate::{execute_wasm, AttributeBuilder, Fungible};
-use cosmwasm_std::{
-    to_json_binary, Addr, Attribute, Binary, CosmosMsg, Deps, StdResult, Uint128, WasmMsg,
-};
-use cw721::Expiration;
+use cosmwasm_std::{Addr, Attribute, Binary, CosmosMsg, Deps, StdResult, Uint128, WasmMsg};
+use cw_utils::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -112,6 +110,20 @@ impl Cw20Token {
                 spender: spender.into(),
                 amount: amount.into(),
                 expires,
+            },
+        )
+    }
+
+    pub fn mint(
+        &self,
+        recipient: impl Into<String>,
+        amount: impl Into<Uint128>,
+    ) -> StdResult<CosmosMsg> {
+        execute_wasm(
+            &self.address,
+            &cw20_base::msg::ExecuteMsg::Mint {
+                recipient: recipient.into(),
+                amount: amount.into(),
             },
         )
     }
