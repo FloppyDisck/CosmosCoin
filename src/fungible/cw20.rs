@@ -1,5 +1,8 @@
-use crate::{AttributeBuilder, Fungible};
-use cosmwasm_std::{to_json_binary, Addr, Attribute, CosmosMsg, Deps, StdResult, Uint128, WasmMsg};
+use crate::{execute_wasm, AttributeBuilder, Fungible};
+use cosmwasm_std::{
+    to_json_binary, Addr, Attribute, Binary, CosmosMsg, Deps, StdResult, Uint128, WasmMsg,
+};
+use cw721::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -13,44 +16,125 @@ impl Cw20Token {
         Self { address }
     }
 
-    pub fn transfer_from(
+    /// Send transaction that uses the cw20 Send smart contract interface
+    pub fn contract_send(
         &self,
-        owner: &Addr,
-        recipient: &Addr,
-        amount: Uint128,
+        contract: impl Into<String>,
+        amount: impl Into<Uint128>,
+        msg: Binary,
     ) -> StdResult<CosmosMsg> {
-        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.address.to_string(),
-            msg: to_json_binary(&cw20_base::msg::ExecuteMsg::TransferFrom {
-                owner: owner.to_string(),
-                recipient: recipient.to_string(),
-                amount,
-            })?,
-            funds: vec![],
-        }))
+        execute_wasm(
+            &self.address,
+            &cw20_base::msg::ExecuteMsg::Send {
+                contract: contract.into(),
+                msg,
+                amount: amount.into(),
+            },
+        )
+    }
+
+    /// Send from transaction that uses the cw20 Send smart contract interface
+    pub fn contract_send_from(
+        &self,
+        owner: impl Into<String>,
+        contract: impl Into<String>,
+        amount: impl Into<Uint128>,
+        msg: Binary,
+    ) -> StdResult<CosmosMsg> {
+        execute_wasm(
+            &self.address,
+            &cw20_base::msg::ExecuteMsg::SendFrom {
+                owner: owner.into(),
+                contract: contract.into(),
+                msg,
+                amount: amount.into(),
+            },
+        )
+    }
+
+    /// Standard send from another owner's address
+    pub fn send_from(
+        &self,
+        owner: impl Into<String>,
+        recipient: impl Into<String>,
+        amount: impl Into<Uint128>,
+    ) -> StdResult<CosmosMsg> {
+        execute_wasm(
+            &self.address,
+            &cw20_base::msg::ExecuteMsg::TransferFrom {
+                owner: owner.into(),
+                recipient: recipient.into(),
+                amount: amount.into(),
+            },
+        )
+    }
+
+    /// Burn from another owner's address
+    pub fn burn_from(
+        &self,
+        owner: impl Into<String>,
+        amount: impl Into<Uint128>,
+    ) -> StdResult<CosmosMsg> {
+        execute_wasm(
+            &self.address,
+            &cw20_base::msg::ExecuteMsg::BurnFrom {
+                owner: owner.into(),
+                amount: amount.into(),
+            },
+        )
+    }
+
+    pub fn increase_allowance(
+        &self,
+        spender: impl Into<String>,
+        amount: impl Into<Uint128>,
+        expires: Option<Expiration>,
+    ) -> StdResult<CosmosMsg> {
+        execute_wasm(
+            &self.address,
+            &cw20_base::msg::ExecuteMsg::IncreaseAllowance {
+                spender: spender.into(),
+                amount: amount.into(),
+                expires,
+            },
+        )
+    }
+
+    pub fn decrease_allowance(
+        &self,
+        spender: impl Into<String>,
+        amount: impl Into<Uint128>,
+        expires: Option<Expiration>,
+    ) -> StdResult<CosmosMsg> {
+        execute_wasm(
+            &self.address,
+            &cw20_base::msg::ExecuteMsg::DecreaseAllowance {
+                spender: spender.into(),
+                amount: amount.into(),
+                expires,
+            },
+        )
     }
 }
 
 impl Fungible for Cw20Token {
     fn send(&self, target: impl Into<String>, amount: impl Into<Uint128>) -> StdResult<CosmosMsg> {
-        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.address.to_string(),
-            msg: to_json_binary(&cw20_base::msg::ExecuteMsg::Transfer {
+        execute_wasm(
+            &self.address,
+            &cw20_base::msg::ExecuteMsg::Transfer {
                 recipient: target.into(),
                 amount: amount.into(),
-            })?,
-            funds: vec![],
-        }))
+            },
+        )
     }
 
     fn burn(&self, amount: impl Into<Uint128>) -> StdResult<CosmosMsg> {
-        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.address.to_string(),
-            msg: to_json_binary(&cw20_base::msg::ExecuteMsg::Burn {
+        execute_wasm(
+            &self.address,
+            &cw20_base::msg::ExecuteMsg::Burn {
                 amount: amount.into(),
-            })?,
-            funds: vec![],
-        }))
+            },
+        )
     }
 
     fn balance(&self, address: impl Into<String>, deps: Deps) -> StdResult<Uint128> {

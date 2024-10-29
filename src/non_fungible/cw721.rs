@@ -1,5 +1,5 @@
 use crate::non_fungible::NonFungible;
-use crate::AttributeBuilder;
+use crate::{execute_wasm, AttributeBuilder};
 use cosmwasm_std::{to_json_binary, Addr, Attribute, CosmosMsg, Deps, StdResult, WasmMsg};
 use cw721::{NumTokensResponse, OwnerOfResponse, TokensResponse};
 use schemars::JsonSchema;
@@ -18,24 +18,22 @@ impl Cw721Token {
 
 impl NonFungible for Cw721Token {
     fn send(&self, target: impl Into<String>, token: impl Into<String>) -> StdResult<CosmosMsg> {
-        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.address.to_string(),
-            msg: to_json_binary(&cw721::Cw721ExecuteMsg::TransferNft {
+        execute_wasm(
+            &self.address,
+            &cw721::Cw721ExecuteMsg::TransferNft {
                 recipient: target.into(),
                 token_id: token.into(),
-            })?,
-            funds: vec![],
-        }))
+            },
+        )
     }
 
     fn burn(&self, token: impl Into<String>) -> StdResult<CosmosMsg> {
-        Ok(CosmosMsg::Wasm(WasmMsg::Execute {
-            contract_addr: self.address.to_string(),
-            msg: to_json_binary(&cw721::Cw721ExecuteMsg::Burn {
+        execute_wasm(
+            &self.address,
+            &cw721::Cw721ExecuteMsg::Burn {
                 token_id: token.into(),
-            })?,
-            funds: vec![],
-        }))
+            },
+        )
     }
 
     fn owner_of(&self, token: impl Into<String>, deps: Deps) -> StdResult<OwnerOfResponse> {
