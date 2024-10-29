@@ -1,7 +1,6 @@
-use crate::non_fungible::cw721::Cw721Token;
 use crate::non_fungible::NonFungible;
-use crate::{AttributeBuilder, TokenKey};
-use cosmwasm_std::{Addr, Attribute, CosmosMsg, Deps, StdResult};
+use crate::{AttributeBuilder, BaseCw721Token, TokenKey};
+use cosmwasm_std::{Addr, Attribute, CosmosMsg, Deps, Empty, StdResult};
 use cw721::OwnerOfResponse;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -9,12 +8,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum NonFungibleTokenInfo {
-    Base(Cw721Token),
+    Base(BaseCw721Token),
 }
 
 impl NonFungibleTokenInfo {
     pub fn base(address: Addr) -> Self {
-        Self::Base(Cw721Token::new(address))
+        Self::Base(BaseCw721Token::new(address))
     }
 
     pub fn is_base(&self) -> bool {
@@ -37,6 +36,8 @@ impl NonFungibleTokenInfo {
 }
 
 impl NonFungible for NonFungibleTokenInfo {
+    type Extension = Empty;
+
     fn send(&self, target: impl Into<String>, token: impl Into<String>) -> StdResult<CosmosMsg> {
         match self {
             Self::Base(cw721) => cw721.send(target, token),
@@ -46,6 +47,18 @@ impl NonFungible for NonFungibleTokenInfo {
     fn burn(&self, token: impl Into<String>) -> StdResult<CosmosMsg> {
         match self {
             Self::Base(cw721) => cw721.burn(token),
+        }
+    }
+
+    fn mint(
+        &self,
+        token: impl Into<String>,
+        owner: impl Into<String>,
+        token_uri: Option<String>,
+        extension: Self::Extension,
+    ) -> StdResult<CosmosMsg> {
+        match self {
+            Self::Base(cw721) => cw721.mint(token, owner, token_uri, extension),
         }
     }
 

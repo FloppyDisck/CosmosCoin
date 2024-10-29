@@ -1,26 +1,40 @@
 use crate::non_fungible::NonFungible;
 use crate::{execute_wasm, AttributeBuilder};
-use cosmwasm_std::{to_json_binary, Addr, Attribute, CosmosMsg, Deps, StdResult, WasmMsg};
+use cosmwasm_std::{Addr, Attribute, CosmosMsg, Deps, Empty, StdResult, WasmMsg};
 use cw721::{NumTokensResponse, OwnerOfResponse, TokensResponse};
 use schemars::JsonSchema;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::marker::PhantomData;
+
+pub type BaseCw721Token = Cw721Token<Empty, Empty, Empty>;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Cw721Token {
+pub struct Cw721Token<T, E, Q> {
     pub address: Addr,
+    phantom_data: PhantomData<(T, E, Q)>,
 }
 
-impl Cw721Token {
+impl<T, E, Q> Cw721Token<T, E, Q> {
     pub fn new(address: Addr) -> Self {
-        Self { address }
+        Self {
+            address,
+            phantom_data: Default::default(),
+        }
     }
 }
 
-impl NonFungible for Cw721Token {
+impl<T, E, Q> NonFungible for Cw721Token<T, E, Q>
+where
+    T: Serialize + DeserializeOwned + Clone,
+    E: Serialize + DeserializeOwned + Clone,
+    Q: Serialize + DeserializeOwned + Clone + JsonSchema,
+{
+    type Extension = T;
     fn send(&self, target: impl Into<String>, token: impl Into<String>) -> StdResult<CosmosMsg> {
         execute_wasm(
             &self.address,
-            &cw721::Cw721ExecuteMsg::TransferNft {
+            &cw721_base::ExecuteMsg::<T, E>::TransferNft {
                 recipient: target.into(),
                 token_id: token.into(),
             },
@@ -30,8 +44,26 @@ impl NonFungible for Cw721Token {
     fn burn(&self, token: impl Into<String>) -> StdResult<CosmosMsg> {
         execute_wasm(
             &self.address,
-            &cw721::Cw721ExecuteMsg::Burn {
+            &cw721_base::ExecuteMsg::<T, E>::Burn {
                 token_id: token.into(),
+            },
+        )
+    }
+
+    fn mint(
+        &self,
+        token: impl Into<String>,
+        owner: impl Into<String>,
+        token_uri: Option<String>,
+        extension: Self::Extension,
+    ) -> StdResult<CosmosMsg> {
+        execute_wasm(
+            &self.address,
+            &cw721_base::ExecuteMsg::<T, E>::Mint {
+                token_id: token.into(),
+                owner: owner.into(),
+                token_uri,
+                extension,
             },
         )
     }
@@ -39,7 +71,7 @@ impl NonFungible for Cw721Token {
     fn owner_of(&self, token: impl Into<String>, deps: Deps) -> StdResult<OwnerOfResponse> {
         deps.querier.query_wasm_smart::<OwnerOfResponse>(
             &self.address,
-            &cw721::Cw721QueryMsg::OwnerOf {
+            &cw721_base::QueryMsg::<Q>::OwnerOf {
                 token_id: token.into(),
                 include_expired: None,
             },
@@ -50,7 +82,7 @@ impl NonFungible for Cw721Token {
         deps.querier
             .query_wasm_smart::<NumTokensResponse>(
                 &self.address,
-                &cw721::Cw721QueryMsg::NumTokens {},
+                &cw721_base::QueryMsg::<Q>::NumTokens {},
             )
             .map(|num| num.count)
     }
@@ -65,7 +97,7 @@ impl NonFungible for Cw721Token {
         if let Some(owner) = owner {
             deps.querier.query_wasm_smart::<TokensResponse>(
                 &self.address,
-                &cw721::Cw721QueryMsg::Tokens {
+                &cw721_base::QueryMsg::<Q>::Tokens {
                     owner: owner.into(),
                     start_after,
                     limit,
@@ -74,14 +106,14 @@ impl NonFungible for Cw721Token {
         } else {
             deps.querier.query_wasm_smart::<TokensResponse>(
                 &self.address,
-                &cw721::Cw721QueryMsg::AllTokens { start_after, limit },
+                &cw721_base::QueryMsg::<Q>::AllTokens { start_after, limit },
             )
         }
         .map(|tokens| tokens.tokens)
     }
 }
 
-impl AttributeBuilder for Cw721Token {
+impl<T, E, Q> AttributeBuilder for Cw721Token<T, E, Q> {
     fn attributes(&self) -> StdResult<Vec<Attribute>> {
         Ok(vec![
             Attribute::new("type", "cw721"),
@@ -90,7 +122,7 @@ impl AttributeBuilder for Cw721Token {
     }
 }
 
-impl Serialize for Cw721Token {
+impl<T, E, Q> Serialize for Cw721Token<T, E, Q> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -99,7 +131,7 @@ impl Serialize for Cw721Token {
     }
 }
 
-impl<'de> Deserialize<'de> for Cw721Token {
+impl<'de, T, E, Q> Deserialize<'de> for Cw721Token<T, E, Q> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -108,7 +140,7 @@ impl<'de> Deserialize<'de> for Cw721Token {
     }
 }
 
-impl JsonSchema for Cw721Token {
+impl<T, E, Q> JsonSchema for Cw721Token<T, E, Q> {
     fn schema_name() -> String {
         "Cw721Token".to_owned()
     }
@@ -122,18 +154,18 @@ impl JsonSchema for Cw721Token {
 
 #[cfg(test)]
 mod test {
-    use crate::non_fungible::cw721::Cw721Token;
+    use crate::non_fungible::cw721::BaseCw721Token;
     use cosmwasm_std::Addr;
 
     #[test]
     fn serde() {
-        let cw721 = Cw721Token::new(Addr::unchecked("some_token"));
+        let cw721 = BaseCw721Token::new(Addr::unchecked("some_token"));
         let got_serialized = serde_json::to_string(&cw721).unwrap();
         let expected_serialized = "\"some_token\"".to_string();
 
         assert_eq!(got_serialized, expected_serialized);
         assert_eq!(
-            serde_json::from_str::<Cw721Token>(&expected_serialized).unwrap(),
+            serde_json::from_str::<BaseCw721Token>(&expected_serialized).unwrap(),
             cw721
         );
     }
