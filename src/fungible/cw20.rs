@@ -1,5 +1,5 @@
 use crate::{execute_wasm, AttributeBuilder, Fungible};
-use cosmwasm_std::{Addr, Attribute, Binary, CosmosMsg, Deps, StdResult, Uint128, WasmMsg};
+use cosmwasm_std::{Addr, Attribute, Binary, CosmosMsg, Deps, StdResult, Uint128};
 use cw_utils::Expiration;
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -175,7 +175,7 @@ impl Serialize for Cw20Token {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&self.address.as_str())
+        serializer.serialize_str(self.address.as_str())
     }
 }
 

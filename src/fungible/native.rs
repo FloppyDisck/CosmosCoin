@@ -66,7 +66,7 @@ impl<'de> Deserialize<'de> for NativeToken {
     where
         D: Deserializer<'de>,
     {
-        String::deserialize(deserializer).map(|denom| Self::new(denom))
+        String::deserialize(deserializer).map(Self::new)
     }
 }
 

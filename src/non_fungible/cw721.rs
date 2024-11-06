@@ -1,6 +1,6 @@
 use crate::non_fungible::NonFungible;
 use crate::{execute_wasm, AttributeBuilder};
-use cosmwasm_std::{Addr, Attribute, CosmosMsg, Deps, Empty, StdResult, WasmMsg};
+use cosmwasm_std::{Addr, Attribute, CosmosMsg, Deps, Empty, StdResult};
 use cw721::{NumTokensResponse, OwnerOfResponse, TokensResponse};
 use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
@@ -98,7 +98,7 @@ where
             deps.querier.query_wasm_smart::<TokensResponse>(
                 &self.address,
                 &cw721_base::QueryMsg::<Q>::Tokens {
-                    owner: owner.into(),
+                    owner,
                     start_after,
                     limit,
                 },
@@ -127,7 +127,7 @@ impl<T, E, Q> Serialize for Cw721Token<T, E, Q> {
     where
         S: Serializer,
     {
-        serializer.serialize_str(&self.address.as_str())
+        serializer.serialize_str(self.address.as_str())
     }
 }
 
