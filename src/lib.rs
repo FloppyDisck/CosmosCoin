@@ -1,18 +1,38 @@
-mod cw20;
-mod info;
-mod native;
-mod token;
+pub mod fungible;
+pub mod non_fungible;
 
-pub use crate::cw20::Cw20Token;
-pub use crate::info::{TokenInfo, TokenKey};
-pub use crate::native::NativeToken;
-pub use crate::token::Token;
-use cosmwasm_std::{Addr, Attribute, CosmosMsg, Deps, StdResult, Uint128};
+use cosmwasm_std::{
+    to_json_binary, to_json_string, Attribute, CosmosMsg, Response, StdResult, WasmMsg,
+};
+pub use fungible::*;
+pub use non_fungible::*;
+use serde::Serialize;
 
-pub trait GenericToken {
-    fn send(&self, target: &Addr, amount: Uint128) -> StdResult<CosmosMsg>;
-    fn burn(&self, amount: Uint128) -> StdResult<CosmosMsg>;
-    fn balance(&self, address: &Addr, deps: Deps) -> StdResult<Uint128>;
-    fn attributes(&self) -> Vec<Attribute>;
-    // TODO: add grant function and disclaimer that CW20 granting is the one that works on smart contracts
+pub type TokenKey = (u8, String);
+
+pub(crate) fn execute_wasm<T: Serialize + ?Sized>(
+    contract: impl Into<String>,
+    msg: &T,
+) -> StdResult<CosmosMsg> {
+    Ok(CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: contract.into(),
+        msg: to_json_binary(msg)?,
+        funds: vec![],
+    }))
+}
+
+pub trait AttributeBuilder: Serialize {
+    fn write_json_attributes(&self, key: &str, resp: &mut Response) -> StdResult<()> {
+        resp.attributes.push(self.json_attributes(key)?);
+        Ok(())
+    }
+    fn write_attributes(&self, resp: &mut Response) -> StdResult<()> {
+        resp.attributes.append(&mut self.attributes()?);
+        Ok(())
+    }
+    fn json_attributes(&self, key: &str) -> StdResult<Attribute> {
+        let value = to_json_string(self)?;
+        Ok(Attribute::new(key, value))
+    }
+    fn attributes(&self) -> StdResult<Vec<Attribute>>;
 }
